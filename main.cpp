@@ -3,17 +3,78 @@
 #include <string>
 #include "JSON.h"
 #include "Topology/map/embeddedMap2.h"
+#include "Topology/generic/parameters.h"
+#include "Geometry/vector_gen.h"
+#include "Algo/Tiling/Surface/square.h"
 
 using namespace std;
 using namespace util;
 using namespace CGoGN;
+// using namespace CGoGN::Geom;
+
+struct PFP : public PFP_STANDARD {
+  typedef EmbeddedMap2 MAP;
+};
+
+typedef PFP::MAP  MAP;
+typedef PFP::VEC3 VEC3;
 
 int main(int argc, char **argv) {
     
-  EmbeddedMap2 map;
-  Dart square = map.newFace(4);
-  Dart triangle = map.newFace(3);
-  map.sewFaces(square, triangle);
+  MAP map;
+  Dart square    = map.newFace(4);
+  Dart triangle1 = map.newFace(3);
+  // Dart triangle2 = map.newFace(3);
+  map.sewFaces(square, triangle1);
+  
+  VertexAttribute<VEC3, MAP> position       = map.addAttribute<VEC3, VERTEX, MAP>("position");
+  VertexAttribute<int, MAP>  vertex_index   = map.addAttribute<int, VERTEX, MAP>("vi");
+  EdgeAttribute<int, MAP>    line_index     = map.addAttribute<int, EDGE, MAP>("ei");
+  FaceAttribute<int, MAP>    face_index     = map.addAttribute<int, FACE, MAP>("fi");
+  // cout << triangle1 << endl;
+  // cout << square    << endl;
+
+  // CellMarker<MAP, VERTEX> cm(map);
+  DartMarker<MAP> dm(map);
+
+  // create global index enumeration
+  int globI = 0;
+  for(Dart d=map.begin(); d!=map.end(); map.next(d)) {
+    if( !dm.isMarked(d) ) {
+      cout << "New vertex #" << globI << "( on dart #" << d << " )" << endl;
+      vertex_index[d] = globI++;
+      dm.markOrbit<VERTEX>(d);
+    }
+  }
+  for(Dart d=map.begin(); d!=map.end(); map.next(d))
+    dm.unmark(d);
+
+  // create global edge enumeration
+  globI = 0;
+  for(Dart d=map.begin(); d!=map.end(); map.next(d)) {
+    if( !dm.isMarked(d) ) {
+      cout << "New edge #" << globI << "( on dart #" << d << " )" << endl;
+      line_index[d] = globI++;
+      dm.markOrbit<EDGE>(d);
+    }
+  }
+  for(Dart d=map.begin(); d!=map.end(); map.next(d))
+    dm.unmark(d);
+
+  // create global face enumeration
+  globI = 0;
+  for(Dart d=map.begin(); d!=map.end(); map.next(d)) {
+    if( !dm.isMarked(d) ) {
+      cout << "New face #" << globI << "( on dart #" << d << " )" << endl;
+      face_index[d] = globI++;
+      dm.markOrbit<FACE>(d);
+    }
+  }
+
+  cout << "(F,E,V)" << endl;
+  for(Dart d = map.begin(); d!=map.end(); map.next(d))
+    cout << "(" << face_index[d] << ", " << line_index[d] << ", " << vertex_index[d] << ")" << endl;
+
 
 
   JSONObject json;
@@ -60,7 +121,7 @@ int main(int argc, char **argv) {
   text.push_back( "3" );
   size.push_back( 0 );
 
-  ofstream out( "test.json" );
-  out << json;
-  out.close();
+  // ofstream out( "test.json" );
+  // out << json;
+  // out.close();
 } 
