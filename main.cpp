@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <string>
+#include <cmath>
 #include "JSON.h"
 #include "Topology/map/embeddedMap2.h"
 #include "Topology/generic/parameters.h"
@@ -19,23 +20,74 @@ struct PFP : public PFP_STANDARD {
 typedef PFP::MAP  MAP;
 typedef PFP::VEC3 VEC3;
 
+void sewAndPhi1(MAP& map, Dart& d1, Dart &d2) {
+  map.sewFaces(d1,d2);
+  d1 = map.phi1(d1);
+  d2 = map.phi1(d2);
+}
+
+void initIcosahedron(MAP& map) {
+  Dart face[20];
+  for(int i=0; i<20; i++)
+    face[i] = map.newFace(3);
+  sewAndPhi1(map,face[ 1], face[ 6]); // bottom face
+  sewAndPhi1(map,face[ 1], face[13]);
+  sewAndPhi1(map,face[ 1], face[10]);
+  sewAndPhi1(map,face[10], face[17]); // lvl 1
+  sewAndPhi1(map,face[10], face[ 4]);
+  sewAndPhi1(map,face[ 6], face[ 8]);
+  sewAndPhi1(map,face[ 6], face[ 9]);
+  sewAndPhi1(map,face[13], face[19]);
+  sewAndPhi1(map,face[13], face[12]);
+  sewAndPhi1(map,face[12], face[18]); // lvl 2
+  sewAndPhi1(map,face[12], face[17]);
+  sewAndPhi1(map,face[17], face[15]);
+  sewAndPhi1(map,face[ 4], face[ 5]);
+  sewAndPhi1(map,face[ 4], face[ 8]);
+  sewAndPhi1(map,face[ 8], face[ 2]);
+  sewAndPhi1(map,face[ 9], face[ 3]);
+  sewAndPhi1(map,face[ 9], face[19]);
+  sewAndPhi1(map,face[19], face[16]);
+  sewAndPhi1(map,face[16], face[11]); // lvl 3
+  sewAndPhi1(map,face[16], face[18]);
+  sewAndPhi1(map,face[18], face[14]);
+  sewAndPhi1(map,face[14], face[ 0]); // aaaand messed up
+  sewAndPhi1(map,face[14], face[15]);
+  sewAndPhi1(map,face[15], face[ 5]);
+  sewAndPhi1(map,face[ 5], face[ 7]);
+  face[0] = map.phi1(face[0]);
+  sewAndPhi1(map,face[ 7], face[ 0]);
+  sewAndPhi1(map,face[ 7], face[ 2]);
+  sewAndPhi1(map,face[ 2], face[ 3]);
+  sewAndPhi1(map,face[ 3], face[11]);
+  face[0] = map.phi1(face[0]);
+  sewAndPhi1(map,face[11], face[ 0]);
+}
+
+
 int main(int argc, char **argv) {
     
   MAP map;
-  Dart square    = map.newFace(4);
-  Dart triangle1 = map.newFace(3);
-  // Dart triangle2 = map.newFace(3);
-  map.sewFaces(square, triangle1);
+  initIcosahedron(map);
   
   VertexAttribute<VEC3, MAP> position       = map.addAttribute<VEC3, VERTEX, MAP>("position");
   VertexAttribute<int, MAP>  vertex_index   = map.addAttribute<int, VERTEX, MAP>("vi");
   EdgeAttribute<int, MAP>    line_index     = map.addAttribute<int, EDGE, MAP>("ei");
   FaceAttribute<int, MAP>    face_index     = map.addAttribute<int, FACE, MAP>("fi");
-  // cout << triangle1 << endl;
-  // cout << square    << endl;
 
   // CellMarker<MAP, VERTEX> cm(map);
   DartMarker<MAP> dm(map);
+
+  int k = 0;
+  for(Dart d=map.begin(); d!=map.end(); map.next(d)) {
+    cout << "dart #" << k++ << " is edge? ";
+    for(int i=0; i<3; i++) {
+      cout << map.isBoundaryEdge(d) << " " ;
+      d = map.phi1(d);
+    }
+    cout << endl;
+    dm.unmark(d);
+  }
 
   // create global index enumeration
   int globI = 0;
